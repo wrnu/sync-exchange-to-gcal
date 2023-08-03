@@ -1,0 +1,6 @@
+exchangelib
+google-api-python-client
+google-auth-oauthlib
+python-dateutil
+python-dotenv
+pytz
