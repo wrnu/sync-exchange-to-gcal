@@ -18,8 +18,8 @@ In essence, SyncExToGCal provides a robust, selective synchronization solution, 
 
 ```bash
 
-git clone https://github.com/your-github-username/SyncExToGCal.git
-cd SyncExToGCal
+git clone https://github.com/wrnu/sync-exchange-to-gcal.git
+cd sync-exchange-to-gcal
 ```
 
 1. **Set up a virtual environment (optional, but recommended).**
