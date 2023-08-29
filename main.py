@@ -2,7 +2,9 @@ import os
 import pickle
 from datetime import timedelta
 import logging
+import re
 
+from bs4 import BeautifulSoup, Comment
 from dateutil.parser import parse
 from dotenv import load_dotenv
 from exchangelib import (DELEGATE, Account, Configuration, Credentials,
@@ -29,6 +31,36 @@ handler.setFormatter(formatter)
 
 # Add the handler to the logger
 logger.addHandler(handler)
+
+
+def sanitize_for_google_calendar(html):
+    """
+    Sanitizes HTML for Google Calendar.
+    """
+    allowed_tags = ['b', 'i', 'u', 'a', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                    'img', 'blockquote', 'ol', 'ul', 'li', 'em', 'strong', 'code', 'hr']
+    allowed_attributes = {
+        'a': ['href'],
+        'img': ['src', 'alt']
+    }
+
+    # Remove comments using regular expressions
+    html = re.sub('<!--.*?-->', '', html, flags=re.DOTALL)
+
+    # Further sanitization using BeautifulSoup
+    soup = BeautifulSoup(html, 'lxml')  # Using lxml parser for better handling
+
+    # Remove disallowed tags and attributes
+    for tag in soup.find_all(True):
+        if tag.name not in allowed_tags:
+            tag.unwrap()
+        else:
+            tag.attrs = {name: value for name, value in tag.attrs.items()
+                         if name in allowed_attributes.get(tag.name, [])}
+
+    sanitized_html = str(soup).strip()
+
+    return sanitized_html
 
 
 class SyncExToGCal:
@@ -162,13 +194,13 @@ class SyncExToGCal:
 
     def create_or_update_google_event_from_exchange(self, item):
         """
-        Manages and individual event by creating or updating them in the Google Calendar.
+        Manages and individual event by creating or updating it in the Google Calendar.
         """
         try:
             event_id = item.id
             event = {
                 'summary': self.event_title_prefix + (item.subject[:1024] if item.subject else ''),
-                'description': item.body[:8192] if item.body else '',
+                'description': sanitize_for_google_calendar(item.body[:8192] if item.body else ''),
                 'start': {
                     'dateTime': item.start.strftime("%Y-%m-%dT%H:%M:%S%z"),
                     'timeZone': self.timezone,
@@ -198,9 +230,7 @@ class SyncExToGCal:
                     event['summary'] != g_event.get('summary') or
                     event['description'] != g_event.get('description') or
                     parse(event['start']['dateTime']) != parse(g_event['start'].get('dateTime')) or
-                    parse(event['end']['dateTime']) != parse(g_event['end'].get('dateTime')) or
-                    event['reminders'] != g_event.get('reminders') or
-                    event['transparency'] != g_event.get('transparency')
+                    parse(event['end']['dateTime']) != parse(g_event['end'].get('dateTime'))
                 ):
                     try:
                         self.gcal_service.events().update(calendarId='primary', eventId=g_event['id'], body=event).execute()

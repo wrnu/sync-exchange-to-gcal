@@ -1,6 +1,8 @@
+beautifulsoup4
 exchangelib
 google-api-python-client
 google-auth-oauthlib
+lxml
 python-dateutil
 python-dotenv
 pytz
