@@ -4,7 +4,7 @@ from datetime import timedelta
 import logging
 import re
 
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup
 from dateutil.parser import parse
 from dotenv import load_dotenv
 from exchangelib import (DELEGATE, Account, Configuration, Credentials,
@@ -83,9 +83,11 @@ class SyncExToGCal:
         """
         self.num_days_to_sync = int(os.getenv("EX2GCAL_NUM_DAYS_TO_SYNC", "1"))
         self.event_title_prefix = os.getenv("EX2GCAL_EVENT_TITLE_PREFIX", "")
-        self.event_titles_to_skip = os.environ.get("EX2GCAL_EVENT_TITLES_TO_SKIP", "").split(',')
+        self.event_titles_to_skip = os.environ.get(
+            "EX2GCAL_EVENT_TITLES_TO_SKIP", "").split(',')
         logger.info('Event title prefix: ' + self.event_title_prefix)
-        logger.info('Event titles to skip: ' + ', '.join(self.event_titles_to_skip))
+        logger.info('Event titles to skip: ' +
+                    ', '.join(self.event_titles_to_skip))
 
     def setup_exchange(self):
         """
@@ -98,7 +100,8 @@ class SyncExToGCal:
         try:
             credentials = Credentials(email_address, password)
             config = Configuration(server=server, credentials=credentials)
-            self.exchange_account = Account(email_address, config=config, autodiscover=False, access_type=DELEGATE)
+            self.exchange_account = Account(
+                email_address, config=config, autodiscover=False, access_type=DELEGATE)
         except Exception as e:
             logger.error(f"Failed to setup exchange: {e}")
 
@@ -125,7 +128,8 @@ class SyncExToGCal:
             start = EWSDateTime(now.year, now.month, now.day, tzinfo=tz)
             end = start + timedelta(days=self.num_days_to_sync)
             self.start = start
-            self.end = EWSDateTime(end.year, end.month, end.day, 23, 59, 59, tzinfo=tz)
+            self.end = EWSDateTime(end.year, end.month,
+                                   end.day, 23, 59, 59, tzinfo=tz)
             logger.info(f'Timezone: {tz.ms_id} -> {self.timezone}')
             logger.info(f'Sync start date: {self.start}')
             logger.info(f'Sync end date: {self.end}')
@@ -184,7 +188,8 @@ class SyncExToGCal:
                 # Only events that have this property are managed by this script
                 for g_event in google_events_result.get('items', []):
                     if g_event.get('extendedProperties', {}).get('private', {}).get('exchangeId'):
-                        self.google_events[g_event.get('extendedProperties', {}).get('private', {}).get('exchangeId')] = g_event
+                        self.google_events[g_event.get('extendedProperties', {}).get(
+                            'private', {}).get('exchangeId')] = g_event
 
                 page_token = google_events_result.get('nextPageToken')
                 if not page_token:
@@ -230,11 +235,14 @@ class SyncExToGCal:
                     event['summary'] != g_event.get('summary') or
                     event['description'] != g_event.get('description') or
                     parse(event['start']['dateTime']) != parse(g_event['start'].get('dateTime')) or
-                    parse(event['end']['dateTime']) != parse(g_event['end'].get('dateTime'))
+                    parse(event['end']['dateTime']) != parse(
+                        g_event['end'].get('dateTime'))
                 ):
                     try:
-                        self.gcal_service.events().update(calendarId='primary', eventId=g_event['id'], body=event).execute()
-                        logger.info(f'Event updated: ({g_event["summary"]}) {g_event["htmlLink"]}')
+                        self.gcal_service.events().update(calendarId='primary',
+                                                          eventId=g_event['id'], body=event).execute()
+                        logger.info(
+                            f'Event updated: ({g_event["summary"]}) {g_event["htmlLink"]}')
                     except HttpError as error:
                         logger.error(f'Error: {error}, Event: {g_event}')
 
@@ -242,8 +250,10 @@ class SyncExToGCal:
 
             else:
                 try:
-                    g_event = self.gcal_service.events().insert(calendarId='primary', body=event).execute()
-                    logger.info(f'Event created: ({g_event["summary"]}) {g_event["htmlLink"]}')
+                    g_event = self.gcal_service.events().insert(
+                        calendarId='primary', body=event).execute()
+                    logger.info(
+                        f'Event created: ({g_event["summary"]}) {g_event["htmlLink"]}')
                 except HttpError as error:
                     logger.error(f'Error: {error}, Event: {g_event}')
 
@@ -257,8 +267,10 @@ class SyncExToGCal:
         try:
             for g_event in self.google_events.values():
                 try:
-                    self.gcal_service.events().delete(calendarId='primary', eventId=g_event['id']).execute()
-                    logger.info(f'Event deleted: ({g_event["summary"]}) {g_event["htmlLink"]}')
+                    self.gcal_service.events().delete(calendarId='primary',
+                                                      eventId=g_event['id']).execute()
+                    logger.info(
+                        f'Event deleted: ({g_event["summary"]}) {g_event["htmlLink"]}')
                 except HttpError as error:
                     logger.error(f'Error: {error}, Event: {g_event}')
         except Exception as e:
